@@ -1,72 +1,69 @@
+// ----------------- Decision Tree -----------------
 const decisionTree = {
   question: "Are there signs of EXTRA-ABDOMINAL cause?",
   answers: {
     "Sweet/fruity breath + Diabetes history": {
-      diagnosis: "Diabetic Ketoacidosis",
-      tests: "Blood sugar, ketones, arterial blood gas"
+      diagnosis: ["Diabetic Acidosis"],
+      tests: ["Blood glucose, Urine ketones, ABG"]
     },
     "Productive cough + fever": {
-      diagnosis: "Pneumonia (upper lobe)",
-      tests: "Chest X-ray, sputum culture"
+      diagnosis: ["Pneumonia"],
+      tests: ["Chest X-ray, Sputum analysis"]
     },
     "Shock + chest pain/shortness of breath": {
-      diagnosis: "Myocardial Infarction",
-      tests: "ECG, cardiac enzymes"
+      diagnosis: ["Myocardial Infarction"],
+      tests: ["ECG, Cardiac enzymes"]
     },
     "History of epilepsy/migraine": {
-      diagnosis: "Abdominal seizure/migraine",
-      tests: "EEG"
+      diagnosis: ["Abdominal Migraine / Aura"],
+      tests: ["EEG, Clinical history"]
     },
     "Black ancestry + pain crisis": {
-      diagnosis: "Sickle Cell Crisis",
-      tests: "Sickle cell prep, CBC"
+      diagnosis: ["Sickle Cell Crisis"],
+      tests: ["Sickle Cell prep, CBC"]
     },
     "Known black widow spider bite": {
-      diagnosis: "Black Widow envenomation",
-      tests: "Clinical evaluation"
+      diagnosis: ["Black Widow Bite Reaction"],
+      tests: ["Observation, Symptomatic treatment"]
     },
     "None": {
-      question: "Is the pain intermittent and colicky (comes in waves)?",
+      question: "Is the pain intermittent and colicky?",
       answers: {
         "Yes": {
           question: "Where is the pain located?",
           answers: {
-            "Hyperactive bowel sounds + tympany": {
-              diagnosis: "Intestinal Obstruction",
-              tests: "Abdominal X-ray, CT scan if needed"
+            "Right Upper Quadrant (RUQ)": {
+              diagnosis: ["Cholelithiasis / Choledocholithiasis"],
+              tests: ["Ultrasound of Gallbladder", "HIDA Scan"]
             },
-            "Right upper abdomen + jaundice/dark urine": {
-              diagnosis: "Gallstones (Cholelithiasis / Choledocholithiasis)",
-              tests: "Ultrasound, HIDA scan"
+            "Flank": {
+              diagnosis: ["Nephrolithiasis (Kidney Stones)"],
+              tests: ["IVP or CT Scan"]
             },
-            "Flank/side pain + blood in urine": {
-              diagnosis: "Kidney Stones (Nephrolithiasis)",
-              tests: "CT scan, IVP"
-            },
-            "Abdomen rigid, 'board-like'": {
-              diagnosis: "Perforated ulcer",
-              tests: "X-ray for free air under diaphragm"
+            "Generalized / Tympanic": {
+              diagnosis: ["Intestinal Obstruction"],
+              tests: ["Abdominal X-ray (Flat plate)"]
             }
           }
         },
         "No": {
-          question: "Where is the pain most severe?",
+          question: "Is the pain persistent and localized?",
           answers: {
-            "Lower abdomen": {
-              diagnosis: "Appendicitis, Salpingitis, Ectopic Pregnancy, Diverticulitis, Crohn’s disease, Mittelschmerz",
-              tests: "Ultrasound or CT, pregnancy test if female"
+            "Lower Quadrant": {
+              diagnosis: ["Appendicitis", "Salpingitis", "Ectopic Pregnancy", "Diverticulitis", "Regional Ileitis", "Mittelschmerz"],
+              tests: ["Ultrasound / CT Scan", "Pregnancy test", "Blood tests"]
             },
-            "Right upper abdomen": {
-              diagnosis: "Acute Cholecystitis",
-              tests: "Ultrasound"
+            "Right Upper Quadrant": {
+              diagnosis: ["Acute Cholecystitis"],
+              tests: ["Ultrasound, CBC, Liver function tests"]
             },
-            "Upper middle abdomen + shock": {
-              diagnosis: "Acute Pancreatitis",
-              tests: "Serum amylase/lipase, CT scan"
+            "Patient in Shock": {
+              diagnosis: ["Acute Pancreatitis"],
+              tests: ["Serum amylase/lipase, Ultrasound"]
             },
-            "Bloody stool + severe pain": {
-              diagnosis: "Mesenteric Thrombosis/Embolism or Intussusception (children)",
-              tests: "Angio-CT, Ultrasound"
+            "Bloody Stool": {
+              diagnosis: ["Mesenteric Ischemia", "Intussusception"],
+              tests: ["Angio-CT, Ultrasound"]
             }
           }
         }
@@ -75,37 +72,71 @@ const decisionTree = {
   }
 };
 
-let currentNode;
+// ----------------- State Variables -----------------
+let currentNode = decisionTree;
+let history = [];
 
-function showNode(node) {
-  const qDiv = document.getElementById("question");
-  const aDiv = document.getElementById("answers");
-  const rDiv = document.getElementById("result");
+// ----------------- HTML Elements -----------------
+const questionContainer = document.getElementById("question-container");
+const answersContainer = document.getElementById("answers-container");
+const resultContainer = document.getElementById("result-container");
+const backBtn = document.getElementById("backBtn");
+const restartBtn = document.getElementById("restartBtn");
 
-  qDiv.textContent = "";
-  aDiv.innerHTML = "";
-  rDiv.textContent = "";
+// ----------------- Functions -----------------
+function askQuestion() {
+  // Clear previous
+  questionContainer.innerHTML = "";
+  answersContainer.innerHTML = "";
+  resultContainer.innerHTML = "";
 
-  if (node.diagnosis) {
-    rDiv.innerHTML = `<b>Possible Diagnosis:</b> ${node.diagnosis}<br><b>Suggested Tests:</b> ${node.tests}`;
-  } else {
-    qDiv.textContent = node.question;
-    for (let ans in node.answers) {
-      let btn = document.createElement("button");
-      btn.textContent = ans;
-      btn.onclick = () => {
-        currentNode = node.answers[ans];
-        showNode(currentNode);
-      };
-      aDiv.appendChild(btn);
-    }
+  // Show back button if history exists
+  backBtn.style.display = history.length > 0 ? "inline-block" : "none";
+
+  // Show Start Over only if we are past first question
+  restartBtn.style.display = history.length > 0 ? "inline-block" : "none";
+
+  // If we reached diagnosis
+  if (currentNode.diagnosis) {
+    questionContainer.innerHTML = "<strong>Possible Diagnoses:</strong>";
+    resultContainer.innerHTML = `<ul>
+      ${currentNode.diagnosis.map(d => `<li>${d}</li>`).join('')}
+      </ul>
+      <strong>Recommended Tests:</strong>
+      <ul>${currentNode.tests.map(t => `<li>${t}</li>`).join('')}</ul>`;
+    return;
+  }
+
+  // Show question
+  questionContainer.textContent = currentNode.question;
+
+  // Show answer buttons
+  for (let answer in currentNode.answers) {
+    const btn = document.createElement("button");
+    btn.textContent = answer;
+    btn.addEventListener("click", () => {
+      history.push(currentNode); // save current node
+      currentNode = currentNode.answers[answer];
+      askQuestion();
+    });
+    answersContainer.appendChild(btn);
   }
 }
 
-function startOver() {
-  currentNode = decisionTree;
-  showNode(currentNode);
-}
+// ----------------- Back Button -----------------
+backBtn.addEventListener("click", () => {
+  if (history.length > 0) {
+    currentNode = history.pop();
+    askQuestion();
+  }
+});
 
-// Start on load
-startOver();
+// ----------------- Start Over Button -----------------
+restartBtn.addEventListener("click", () => {
+  currentNode = decisionTree;
+  history = [];
+  askQuestion();
+});
+
+// ----------------- Initialize -----------------
+askQuestion();
